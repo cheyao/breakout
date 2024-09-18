@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
+
+set(CMAKE_ASM_NASM_OBJECT_FORMAT bin)
+# set(CMAKE_NASM_LINK_EXECUTABLE "ld <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+set(CMAKE_NASM_LINK_EXECUTABLE "cp <OBJECTS> <TARGET>")
+
+project(breakout LANGUAGES ASM_NASM VERSION 1.0 DESCRIPTION "Bootsector breakout")
+
+enable_language(ASM_NASM)
+add_executable(${PROJECT_NAME} breakout.asm)
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE NASM)
