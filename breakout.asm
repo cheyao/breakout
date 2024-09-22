@@ -26,48 +26,51 @@ PADDLE_ROWS     equ 6
 	rep stosb
 
 	; Clearing variable memory
-	xor ax, ax
-	inc ax
-	mov bp, START_VARIABLES
 	mov di, END_VARIABLES-START_VARIABLES-1
-	; Use a manual loop since the destination is in ds
+	mov bp, START_VARIABLES
 .clear:
-	mov [bp+di], al
-	dec cx
+	mov byte [bp+di], 1
+	dec di
 	jns .clear
 
 	; Draw paddles
-loop:
 
-	mov di, (PADDLE_COUNT * 20 * PADDLE_ROWS) - 20
+	mov byte [PADDLES + 5], 0
+
+	mov di, PADDLE_COUNT * PADDLE_ROWS
 
 .drawPaddles:
-	mov al, PADDLE_COLOR
-	mov bl, [ds:PADDLES]
+	; If the thing is 1, set color
+	mov ax, PADDLE_COLOR
+	mov bl, [PADDLES + di]
 	mul bl
-	call drawPaddle
 
-	dec di
-	jns .drawPaddles
-
-	jmp loop
-
-drawPaddle: ; The color is in ax, pos in di
 	push di
+
+	; Use mul to calculate coridnates
+	push ax
+	mov ax, 20
+	mul di
+	mov di, ax
+	pop ax
 
 	mov cx, 160 / 8
 	rep stosb
 
 	pop di
 
-	ret
+	dec di
+	jns .drawPaddles
+
+loop:
+	jmp loop
 
 ; Boot stuff
 times 510 - ($-$$) db 0
 dw 0xaa55
 
 ; Place where I store my vars
-[absolute 0xFA00]
+[absolute 0x7E00]
 START_VARIABLES:
 	PADDLE_X resw 1
 	PADDLES  resb PADDLE_COUNT * PADDLE_ROWS
