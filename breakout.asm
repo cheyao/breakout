@@ -19,12 +19,6 @@ PADDLE_ROWS     equ 6
 	; Stack
 	mov sp, 0x7C00
 
-	; Clear screen
-	mov al, 0x00
-	mov cx, SCREEN_WIDTH * SCREEN_HEIGHT
-	xor di, di
-	rep stosb
-
 	; Clearing variable memory
 	mov di, END_VARIABLES-START_VARIABLES-1
 	mov bp, START_VARIABLES
@@ -33,10 +27,16 @@ PADDLE_ROWS     equ 6
 	dec di
 	jns .clear
 
-	; Draw paddles
-
 	mov byte [PADDLES + 5], 0
 
+loop:
+	; Clear screen
+	xor ax, ax
+	xor di, di
+	mov cx, SCREEN_WIDTH * SCREEN_HEIGHT * 2
+	rep stosb
+
+	; Draw paddles
 	mov di, PADDLE_COUNT * PADDLE_ROWS
 
 .drawPaddles:
@@ -62,7 +62,39 @@ PADDLE_ROWS     equ 6
 	dec di
 	jns .drawPaddles
 
-loop:
+.drawPaddle:
+	mov di, [PADDLE_X]
+	mov ax, 2
+	mul di
+	mov di, ax
+
+	mov ax, PADDLE_COLOR
+	add di, SCREEN_WIDTH * 2 * 20
+	mov cx, 160 / 8
+	rep stosb
+
+.input:
+	xor ax, ax
+	int 0x16
+
+	mov bl, [PADDLE_X]
+
+	cmp al, 'a'
+	je .left
+	cmp al, 'd'
+	jne .endKeys
+
+.right:
+	add bl, 1
+	jmp .endKeys
+
+.left:
+	sub bl, 1
+	jmp .endKeys
+
+.endKeys:
+	mov byte [PADDLE_X], bl
+
 	jmp loop
 
 ; Boot stuff
@@ -72,6 +104,6 @@ dw 0xaa55
 ; Place where I store my vars
 [absolute 0x7E00]
 START_VARIABLES:
-	PADDLE_X resw 1
+	PADDLE_X resb 1
 	PADDLES  resb PADDLE_COUNT * PADDLE_ROWS
 END_VARIABLES:
