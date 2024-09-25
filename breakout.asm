@@ -13,6 +13,11 @@ PADDLE_ROWS     equ 6
 	mov ss, ax
 	mov ds, ax
 
+	; mov ax,0x0002 ; Insure correct video mode
+	inc ax
+	inc ax
+	int 0x10
+
 	mov ax, 0xB800
 	mov es, ax ; Video memory
 
@@ -27,9 +32,15 @@ PADDLE_ROWS     equ 6
 	dec di
 	jns .clear
 
-	mov byte [PADDLES + 5], 0
-
 loop:
+.delay:
+	; Wait frames
+	xor ah, ah
+	int 0x1A
+	cmp dx, [OLD_TIME] ; 18.2 clock ticks per second
+	je .delay
+	mov [OLD_TIME], dx
+
 	; Clear screen
 	xor ax, ax
 	xor di, di
@@ -69,33 +80,43 @@ loop:
 	mov di, ax
 
 	mov ax, PADDLE_COLOR
-	add di, SCREEN_WIDTH * 2 * 20
+	add di, SCREEN_WIDTH * 2 * 20 - 32
 	mov cx, 160 / 8
 	rep stosb
 
 .input:
-	xor ax, ax
+	mov ah, 0x02
 	int 0x16
 
 	mov bl, [PADDLE_X]
 
-	cmp al, 'a'
-	je .left
-	cmp al, 'd'
-	jne .endKeys
-
-.right:
-	add bl, 1
-	jmp .endKeys
+	test al, 0x08
+	jne .right
+	test al, 0x04
+	je .endKeys
 
 .left:
+	cmp bl, 0
+	je .endKeys
 	sub bl, 1
 	jmp .endKeys
+
+.right:
+	cmp bl, SCREEN_WIDTH - 10
+	je .endKeys
+	add bl, 1
 
 .endKeys:
 	mov byte [PADDLE_X], bl
 
+	call ball
+
 	jmp loop
+
+ball:
+	ret
+
+OLD_TIME: equ 16
 
 ; Boot stuff
 times 510 - ($-$$) db 0
