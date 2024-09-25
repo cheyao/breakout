@@ -26,11 +26,14 @@ PADDLE_ROWS     equ 6
 
 	; Clearing variable memory
 	mov di, END_VARIABLES-START_VARIABLES-1
-	mov bp, START_VARIABLES
 .clear:
-	mov byte [bp+di], 1
+	mov byte [START_VARIABLES+di], 1
 	dec di
 	jns .clear
+
+	mov byte [BALL_X], SCREEN_WIDTH / 2
+	mov byte [BALL_Y], SCREEN_HEIGHT / 3 * 2
+	mov byte [PADDLE_X], SCREEN_WIDTH / 2 - 4
 
 loop:
 .delay:
@@ -48,9 +51,11 @@ loop:
 	rep stosb
 
 	; Draw paddles
-	mov di, PADDLE_COUNT * PADDLE_ROWS
+	mov di, PADDLE_COUNT * PADDLE_ROWS - 1
 
 .drawPaddles:
+	; TODO: Inc color by di to add color
+
 	; If the thing is 1, set color
 	mov ax, PADDLE_COLOR
 	mov bl, [PADDLES + di]
@@ -74,13 +79,15 @@ loop:
 	jns .drawPaddles
 
 .drawPaddle:
-	mov di, [PADDLE_X]
+	xor dx, dx
+	mov dl, [PADDLE_X]; Insure 16 bit
+	mov di, dx
 	mov ax, 2
 	mul di
 	mov di, ax
 
 	mov ax, PADDLE_COLOR
-	add di, SCREEN_WIDTH * 2 * 20 - 32
+	add di, SCREEN_WIDTH * 2 * 20
 	mov cx, 160 / 8
 	rep stosb
 
@@ -114,6 +121,28 @@ loop:
 	jmp loop
 
 ball:
+	xor ax, ax
+
+	mov al, [BALL_Y]
+	mov dl, SCREEN_WIDTH * 2
+	mul dl
+
+	push ax
+
+	xor ax, ax
+	mov al, [BALL_X]
+	mov di, 2
+	mul di
+	mov di, ax
+
+	; PERF: Not pop mov to ax and add to di
+	pop ax
+
+	add di, ax
+	inc di
+
+	mov byte [es:di], PADDLE_COLOR
+
 	ret
 
 OLD_TIME: equ 16
@@ -127,4 +156,7 @@ dw 0xaa55
 START_VARIABLES:
 	PADDLE_X resb 1
 	PADDLES  resb PADDLE_COUNT * PADDLE_ROWS
+
+	BALL_X  resb 1
+	BALL_Y  resb 1
 END_VARIABLES:
