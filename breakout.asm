@@ -8,6 +8,7 @@ PADDLE_COLOR    equ 0b11101110
 PADDLE_COUNT    equ 8
 PADDLE_ROWS     equ 6
 
+start:
 	; Init routine
 	xor ax, ax
 	mov ss, ax
@@ -34,6 +35,8 @@ PADDLE_ROWS     equ 6
 	mov byte [BALL_X], SCREEN_WIDTH / 2
 	mov byte [BALL_Y], SCREEN_HEIGHT / 3 * 2
 	mov byte [PADDLE_X], SCREEN_WIDTH / 2 - 4
+	mov byte [BALL_XV], -1
+	mov byte [BALL_YV], 1
 
 loop:
 .delay:
@@ -52,6 +55,8 @@ loop:
 
 	; Draw paddles
 	mov di, PADDLE_COUNT * PADDLE_ROWS - 1
+
+	jmp .drawPaddle
 
 .drawPaddles:
 	; TODO: Inc color by di to add color
@@ -121,16 +126,53 @@ loop:
 	jmp loop
 
 ball:
+	; Now update ball
+	mov al, [BALL_X]
+	cmp al, 0
+	jne .left
+	mov byte [BALL_XV], 1
+.left:
+	cmp al, SCREEN_WIDTH
+	jne .endx
+	mov byte [BALL_XV], -1
+.endx:
+
+	; Now Y axis
+	mov al, [BALL_Y]
+	cmp al, 0
+	jne .bottom
+	mov byte [BALL_YV], -1
+.bottom:
+	cmp al, SCREEN_HEIGHT
+	; Player dead, restart
+	je start
+
+	; Paddle collision
+	cmp al, 19
+	jne .endCollision
+
+	mov bl, [PADDLE_X]
+
+.endCollision:
+
 	xor ax, ax
 
 	mov al, [BALL_Y]
+	sub al, [BALL_YV]
+	mov [BALL_Y], al
+
 	mov dl, SCREEN_WIDTH * 2
 	mul dl
 
 	push ax
 
 	xor ax, ax
+
+	; Fetch X at the same time increase speed
 	mov al, [BALL_X]
+	add al, [BALL_XV]
+	mov [BALL_X], al
+
 	mov di, 2
 	mul di
 	mov di, ax
@@ -159,4 +201,7 @@ START_VARIABLES:
 
 	BALL_X  resb 1
 	BALL_Y  resb 1
+
+	BALL_XV resb 1
+	BALL_YV resb 1
 END_VARIABLES:
