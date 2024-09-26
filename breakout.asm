@@ -56,8 +56,6 @@ loop:
 	; Draw paddles
 	mov di, PADDLE_COUNT * PADDLE_ROWS - 1
 
-	jmp .drawPaddle
-
 .drawPaddles:
 	; TODO: Inc color by di to add color
 
@@ -151,7 +149,16 @@ ball:
 	cmp al, 19
 	jne .endCollision
 
+	mov al, [BALL_X]
 	mov bl, [PADDLE_X]
+	cmp al, bl
+	jle .endCollision
+
+	add bl, 160 / 8 / 2
+	cmp al, bl
+	jg .endCollision
+
+	mov byte [BALL_YV], 1
 
 .endCollision:
 
