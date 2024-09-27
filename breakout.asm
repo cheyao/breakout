@@ -14,7 +14,7 @@ start:
 	mov ss, ax
 	mov ds, ax
 
-	; mov ax,0x0002 ; Insure correct video mode
+	; Insure correct video mode
 	inc ax
 	inc ax
 	int 0x10
@@ -38,7 +38,7 @@ start:
 	mov byte [BALL_XV], -1
 	mov byte [BALL_YV], 1
 
-loop:
+mainloop:
 .delay:
 	; Wait frames
 	xor ah, ah
@@ -57,10 +57,11 @@ loop:
 	mov di, PADDLE_COUNT * PADDLE_ROWS - 1
 
 .drawPaddles:
-	; TODO: Inc color by di to add color
+	; MISC: Inc color by di to add color
 
 	; If the thing is 1, set color
 	mov ax, PADDLE_COLOR
+	add ax, di
 	mov bl, [PADDLES + di]
 	mul bl
 
@@ -77,8 +78,8 @@ loop:
 	rep stosb
 
 	pop di
-
 	dec di
+
 	jns .drawPaddles
 
 .drawPaddle:
@@ -121,7 +122,7 @@ loop:
 
 	call ball
 
-	jmp loop
+	jmp mainloop
 
 ball:
 	; Now update ball
@@ -129,17 +130,19 @@ ball:
 	cmp al, 0
 	jne .left
 	mov byte [BALL_XV], 1
+
 .left:
 	cmp al, SCREEN_WIDTH
 	jne .endx
 	mov byte [BALL_XV], -1
-.endx:
 
+.endx:
 	; Now Y axis
 	mov al, [BALL_Y]
 	cmp al, 0
 	jne .bottom
 	mov byte [BALL_YV], -1
+
 .bottom:
 	cmp al, SCREEN_HEIGHT
 	; Player dead, restart
@@ -147,21 +150,59 @@ ball:
 
 	; Paddle collision
 	cmp al, 19
-	jne .endCollision
+	jne .endPaddleCollision
 
 	mov al, [BALL_X]
 	mov bl, [PADDLE_X]
 	cmp al, bl
-	jle .endCollision
+	jle .endPaddleCollision
 
 	add bl, 160 / 8 / 2
 	cmp al, bl
-	jg .endCollision
+	jg .endPaddleCollision
 
 	mov byte [BALL_YV], 1
 
-.endCollision:
+.endPaddleCollision:
+	; Now to break blockes
+	; Not in collision range
+	; Al is position
+	xor ax, ax
+	mov al, PADDLE_COUNT
 
+	mov bl, [BALL_Y]
+	dec bl
+	cmp bl, PADDLE_ROWS
+	jge .endBlockBraking
+
+	mul bl
+
+	push ax
+
+	; Calculate block number
+	xor ax, ax
+	mov al, [BALL_X]
+	mov bl, 10
+	div bl
+
+	xor ah, ah
+
+	mov bl, al
+	mov di, ax
+
+	pop ax
+
+	add di, ax
+
+	; If broken do nothing
+	mov cl, [PADDLES + di]
+	cmp cl, 0
+	je .endBlockBraking
+
+	mov byte [BALL_YV], -1
+	mov byte [PADDLES + di], 0
+
+.endBlockBraking:
 	xor ax, ax
 
 	mov al, [BALL_Y]
@@ -182,10 +223,8 @@ ball:
 
 	mov di, 2
 	mul di
-	mov di, ax
 
-	; PERF: Not pop mov to ax and add to di
-	pop ax
+	pop di
 
 	add di, ax
 	inc di
